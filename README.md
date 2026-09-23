@@ -6,18 +6,30 @@ Shared-expense backend that records group purchases and calculates a compact set
 
 This is the Go successor to [SplitMate-python](https://github.com/igorynos/SplitMate-python).
 
-## Highlights
+## ✨ Features
 
-- Integer monetary arithmetic without floating-point rounding
-- Fair remainder distribution when an expense cannot be divided evenly
-- Deterministic debt settlement between participants
-- Concurrency-safe group state
-- PostgreSQL persistence for users, ledgers, wallets, expenses, and payments
-- Participant management and document deletion
-- Transport-independent business logic with unit tests
-- HTTP API, graceful shutdown, and minimal Docker image
+- 💰 **Safe money calculations:** Uses integer minor units instead of floating-point values.
+- ⚖️ **Fair expense splitting:** Distributes indivisible remainders deterministically.
+- 🔄 **Debt minimization:** Produces a compact settlement plan between debtors and creditors.
+- 👥 **Group accounting:** Manages users, ledgers, participants, and personal wallets.
+- 🛒 **Financial documents:** Records purchases and direct payments separately.
+- 🗑️ **Controlled deletion:** Allows users to remove their own expense and payment documents.
+- 🗄️ **Persistent state:** Stores accounting data and relations in PostgreSQL.
+- 🧪 **Testable domain:** Keeps calculation logic independent from HTTP and database packages.
+- 📴 **Operational safety:** Supports graceful shutdown, health checks, containers, and CI.
 
-## API
+## 🔄 Settlement Example
+
+If Igor pays `3000` for a dinner shared by Igor, Anna, and Max:
+
+```text
+Anna ──1000──► Igor
+Max  ──1000──► Igor
+```
+
+All amounts are represented in the smallest currency unit, so calculations never lose money through floating-point rounding.
+
+## 🌐 API
 
 ```text
 POST /users
@@ -30,7 +42,7 @@ DELETE /documents/{kind}/{id}?user_id={id}
 GET  /health
 ```
 
-Amounts are expressed in the smallest currency unit—for example, cents rather than floating-point dollars.
+## 🚀 Quick Start
 
 ```bash
 go test ./...
@@ -43,4 +55,32 @@ curl -X POST localhost:8080/ledgers/1/expenses \
 curl localhost:8080/ledgers/1/settlement
 ```
 
-The service uses the project layout conventions relevant to an application: `cmd`, `internal`, `configs`, and `deployments`. Start the complete environment with `docker compose -f deployments/compose.yml up --build`.
+Start the complete environment:
+
+```bash
+docker compose -f deployments/compose.yml up --build
+```
+
+## 🏗️ Project Layout
+
+```text
+cmd/splitmate       application entry point
+internal/model      accounting entities
+internal/debts      settlement algorithm
+internal/repository PostgreSQL persistence
+internal/transport  HTTP handlers
+configs             environment template
+deployments         Docker Compose environment
+```
+
+## 🧪 Quality Checks
+
+```bash
+make test
+make lint
+make build
+```
+
+## 🐍 Previous Implementation
+
+The original Telegram-oriented Python version is preserved in [SplitMate-python](https://github.com/igorynos/SplitMate-python).
