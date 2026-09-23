@@ -12,14 +12,21 @@ This is the Go successor to [SplitMate-python](https://github.com/igorynos/Split
 - Fair remainder distribution when an expense cannot be divided evenly
 - Deterministic debt settlement between participants
 - Concurrency-safe group state
+- PostgreSQL persistence for users, ledgers, wallets, expenses, and payments
+- Participant management and document deletion
 - Transport-independent business logic with unit tests
-- HTTP API and minimal Docker image
+- HTTP API, graceful shutdown, and minimal Docker image
 
 ## API
 
 ```text
-POST /groups/{group}/expenses
-GET  /groups/{group}/settlement
+POST /users
+POST /ledgers
+POST /ledgers/{id}/members
+POST /ledgers/{id}/expenses
+POST /ledgers/{id}/payments
+GET  /ledgers/{id}/settlement
+DELETE /documents/{kind}/{id}?user_id={id}
 GET  /health
 ```
 
@@ -29,17 +36,11 @@ Amounts are expressed in the smallest currency unit—for example, cents rather 
 go test ./...
 go run ./cmd/splitmate
 
-curl -X POST localhost:8080/groups/trip/expenses \
+curl -X POST localhost:8080/ledgers/1/expenses \
   -H 'Content-Type: application/json' \
-  -d '{"description":"Dinner","amount":3000,"paid_by":"Igor","participants":["Igor","Anna","Max"]}'
+  -d '{"description":"Dinner","amount":3000,"paid_by":1,"participants":[1,2,3]}'
 
-curl localhost:8080/groups/trip/settlement
+curl localhost:8080/ledgers/1/settlement
 ```
 
-## Roadmap
-
-- PostgreSQL event and balance persistence
-- Telegram bot adapter
-- Expense correction and deletion
-- Monthly summaries and history export
-- Idempotency keys for repeated Telegram updates
+The service uses the project layout conventions relevant to an application: `cmd`, `internal`, `configs`, and `deployments`. Start the complete environment with `docker compose -f deployments/compose.yml up --build`.

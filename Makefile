@@ -1,0 +1,9 @@
+.PHONY: test lint build run
+test:
+	go test -race ./...
+lint:
+	go vet ./...
+build:
+	go build ./...
+run:
+	go run ./cmd/splitmate

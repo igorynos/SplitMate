@@ -1,45 +1,40 @@
 package main
 
 import (
-	"encoding/json"
+	"context"
+	"github.com/igorynos/SplitMate/internal/config"
+	"github.com/igorynos/SplitMate/internal/repository"
+	"github.com/igorynos/SplitMate/internal/transport/httpapi"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"log"
 	"net/http"
-	"os"
-	"strings"
-
-	"github.com/igorynos/SplitMate/internal/debts"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 func main() {
-	svc := debts.NewService()
-	mux := http.NewServeMux()
-	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ok")) })
-	mux.HandleFunc("/groups/", func(w http.ResponseWriter, r *http.Request) {
-		parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-		if len(parts) != 3 || parts[0] != "groups" {
-			http.NotFound(w, r)
-			return
-		}
-		group, action := parts[1], parts[2]
-		w.Header().Set("Content-Type", "application/json")
-		switch {
-		case r.Method == http.MethodPost && action == "expenses":
-			var e debts.Expense
-			if json.NewDecoder(r.Body).Decode(&e) != nil || svc.Add(group, e) != nil {
-				http.Error(w, "invalid expense", http.StatusBadRequest)
-				return
-			}
-			w.WriteHeader(http.StatusCreated)
-		case r.Method == http.MethodGet && action == "settlement":
-			json.NewEncoder(w).Encode(svc.Settle(group))
-		default:
-			http.NotFound(w, r)
-		}
-	})
-	addr := os.Getenv("HTTP_ADDR")
-	if addr == "" {
-		addr = ":8080"
+	cfg := config.Load()
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	db, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	if err != nil {
+		log.Fatal(err)
 	}
-	log.Printf("SplitMate listening on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, mux))
+	defer db.Close()
+	repo := repository.NewPostgres(db)
+	if err = repo.Migrate(ctx); err != nil {
+		log.Fatal(err)
+	}
+	srv := &http.Server{Addr: cfg.HTTPAddr, Handler: (&httpapi.Server{Repo: repo}).Handler(), ReadHeaderTimeout: 5 * time.Second}
+	go func() {
+		log.Printf("SplitMate listening on %s", cfg.HTTPAddr)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
+	<-ctx.Done()
+	shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	srv.Shutdown(shutdown)
 }
