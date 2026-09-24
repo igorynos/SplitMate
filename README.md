@@ -4,8 +4,6 @@
 
 Shared-expense backend that records group purchases and calculates a compact settlement plan showing who should pay whom.
 
-This is the Go successor to [SplitMate-python](https://github.com/igorynos/SplitMate-python).
-
 ## ✨ Features
 
 - 💰 **Safe money calculations:** Uses integer minor units instead of floating-point values.
@@ -80,7 +78,3 @@ make test
 make lint
 make build
 ```
-
-## 🐍 Previous Implementation
-
-The original Telegram-oriented Python version is preserved in [SplitMate-python](https://github.com/igorynos/SplitMate-python).
